@@ -1,3 +1,18 @@
+
+This is a fork of https://github.com/pukkaone/tcom.gito
+
+I needed to be able to exchange data buffers with a COM interface.  If the 
+tcl procedure is called with a byte array object a buffer of the corrosponding
+size is passed to the COM routine.  On return the data from the buffer is 
+copied back to the byte array.  There are a few too many byte array objects 
+created and the data is copied too many times, but it works and isn't grossly 
+inefficient.
+
+Changes should appear in this repository in the next few days.
+
+
+---------------------------------------------------------------------------------
+
 Tcom is a Windows-specific Tcl extension that provides commands to access and
 implement COM objects.  This extension enables client-side and server-side
 scripting of COM objects through IDispatch and IUnknown derived interfaces.
