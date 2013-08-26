@@ -140,7 +140,7 @@ TypedArguments::storeOutValues (
         Method::Parameters::const_iterator p = parameters.begin();
         for (int i = 0; i < objc && p != parameters.end(); ++i, --j, ++p) {
             if (p->flags() & PARAMFLAG_FOUT) {
-                TclObject value(&m_outValues[j], p->type(), interp);
+                TclObject value(&m_outValues[j], p->type(), interp, objv[i]);
                 Tcl_ObjSetVar2(
                     interp, objv[i], NULL, value, TCL_LEAVE_ERR_MSG);
             }

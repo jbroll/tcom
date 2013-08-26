@@ -106,7 +106,7 @@ Extension::foreachCmd (
 		    _variant_t elementVar;
 		    hr = pEnumVARIANT->Next(1, &elementVar, &count);
 		    if (hr == S_OK && count > 0) {
-			value = TclObject(&elementVar, Type::variant(), interp);
+			value = TclObject(&elementVar, Type::variant(), interp, NULL);
 		    }
 		}
 		break;

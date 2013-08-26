@@ -162,9 +162,48 @@ convertFromSafeArray (
     unsigned dim,
     long *pIndices,
     const Type &type,
-    Tcl_Interp *interp)
+    Tcl_Interp *interp,
+    Tcl_Obj CONST *obj)
 {
     HRESULT hr;
+    Tcl_Obj *pResult;
+
+    if ( obj != NULL && obj->typePtr == TclTypes::byteArrayType() ) {
+	int size;
+
+	switch ( elementType ) {
+	    case VT_I1  : size = 1;	break;
+	    case VT_I2  : size = 2;	break;
+	    case VT_I4  : size = 4;	break;
+
+	    case VT_UI1 : size = 1;	break;
+	    case VT_UI2 : size = 2;	break;
+	    case VT_UI4 : size = 4;	break;
+	}
+
+	int dimsize ; 
+        int length = 0 ; 
+        for(int i = 0 ; i < psa->cDims ; ++i) { 
+            dimsize = psa->cbElements * (psa->rgsabound[i].cElements);
+            length *= dimsize; 
+        } 
+
+        unsigned char *pData;
+        hr = SafeArrayAccessData(psa, reinterpret_cast<void **>(&pData));
+        if (FAILED(hr)) {
+            _com_issue_error(hr);
+        }
+
+        pResult = Tcl_NewByteArrayObj((unsigned char *)psa->pvData, length*size);
+
+        hr = SafeArrayUnaccessData(psa);
+        if (FAILED(hr)) {
+            _com_issue_error(hr);
+        }
+
+	return pResult;
+    }
+
 
     // Get index range.
     long lowerBound;
@@ -179,14 +218,13 @@ convertFromSafeArray (
         _com_issue_error(hr);
     }
 
-    Tcl_Obj *pResult;
     if (dim < SafeArrayGetDim(psa)) {
         // Create list of list for multi-dimensional array.
         pResult = Tcl_NewListObj(0, 0);
         for (long i = lowerBound; i <= upperBound; ++i) {
             pIndices[dim - 1] = i;
             Tcl_Obj *pElement = convertFromSafeArray(
-                psa, elementType, dim + 1, pIndices, type, interp);
+                psa, elementType, dim + 1, pIndices, type, interp, obj);
             Tcl_ListObjAppendElement(interp, pResult, pElement);
         }
         return pResult;
@@ -232,7 +270,7 @@ convertFromSafeArray (
                 _com_issue_error(hr);
             }
 
-            TclObject element(&elementVar, type, interp);
+            TclObject element(&elementVar, type, interp, NULL);
             Tcl_ListObjAppendElement(interp, pResult, element);
         }
     }
@@ -309,15 +347,15 @@ convertFromUnknown (IUnknown *pUnknown, REFIID iid, Tcl_Interp *interp)
         Reference::newReference(pUnknown, pInterface));
 }
 
-TclObject::TclObject (VARIANT *pSrc, const Type &type, Tcl_Interp *interp)
+TclObject::TclObject (VARIANT *pSrc, const Type &type, Tcl_Interp *interp, Tcl_Obj CONST *obj)
 {
     if (V_ISARRAY(pSrc)) {
         SAFEARRAY *psa = V_ISBYREF(pSrc) ? *V_ARRAYREF(pSrc) : V_ARRAY(pSrc);
         VARTYPE elementType = V_VT(pSrc) & VT_TYPEMASK;
         unsigned numDimensions = SafeArrayGetDim(psa);
         std::vector<long> indices(numDimensions);
-        m_pObj = convertFromSafeArray(
-            psa, elementType, 1, &indices[0], type, interp);
+
+        m_pObj = convertFromSafeArray( psa, elementType, 1, &indices[0], type, interp, obj);
 
     } else if (vtMissing == pSrc) {
         m_pObj = Extension::newNaObj();
@@ -452,13 +490,12 @@ TclObject::TclObject (const _bstr_t &src)
     Tcl_IncrRefCount(m_pObj);
 }
 
-TclObject::TclObject (
-    SAFEARRAY *psa, const Type &type, Tcl_Interp *interp)
+TclObject::TclObject (SAFEARRAY *psa, const Type &type, Tcl_Interp *interp, Tcl_Obj const *obj)
 {
     unsigned numDimensions = SafeArrayGetDim(psa);
     std::vector<long> indices(numDimensions);
     m_pObj = convertFromSafeArray(
-        psa, type.elementType().vartype(), 1, &indices[0], type, interp);
+        psa, type.elementType().vartype(), 1, &indices[0], type, interp, obj);
 
     Tcl_IncrRefCount(m_pObj);
 }
@@ -479,25 +516,37 @@ TclObject::getBSTR () const
 // Convert Tcl byte array to SAFEARRAY of bytes.
 
 static SAFEARRAY *
-newByteSafeArray (Tcl_Obj *pObj)
+newSafeArray (Tcl_Obj *pObj, VARTYPE type)
 {
+    int size;
     int length;
     unsigned char *pSrc = Tcl_GetByteArrayFromObj(pObj, &length);
 
-    SAFEARRAY *psa = SafeArrayCreateVector(VT_UI1, 0, length);
+    switch ( type ) {
+	case VT_I1  : size = 1;	break;
+	case VT_I2  : size = 2;	break;
+	case VT_I4  : size = 4;	break;
+
+	case VT_UI1 : size = 1;	break;
+	case VT_UI2 : size = 2;	break;
+	case VT_UI4 : size = 4;	break;
+    }
+
+    length /= size;
+
+    SAFEARRAY *psa = SafeArrayCreateVector(type, 0, length);
     if (psa == 0) {
         _com_issue_error(E_OUTOFMEMORY);
     }
 
     unsigned char *pDest;
     HRESULT hr;
-    hr = SafeArrayAccessData(
-        psa, reinterpret_cast<void **>(&pDest));
+    hr = SafeArrayAccessData(psa, reinterpret_cast<void **>(&pDest));
     if (FAILED(hr)) {
         _com_issue_error(hr);
     }
 
-    memcpy(pDest, pSrc, length);
+    memcpy(pDest, pSrc, length*size);
 
     hr = SafeArrayUnaccessData(psa);
     if (FAILED(hr)) {
@@ -513,8 +562,8 @@ TclObject::getSafeArray (const Type &elementType, Tcl_Interp *interp) const
 {
     SAFEARRAY *psa;
 
-    if (elementType.vartype() == VT_UI1) {
-        psa = newByteSafeArray(m_pObj);
+    if (m_pObj->typePtr == TclTypes::byteArrayType() || elementType.vartype() == VT_UI1) {
+        psa = newSafeArray(m_pObj, elementType.vartype());
     } else {
         // Convert Tcl list to SAFEARRAY.
         int numElements;
@@ -547,7 +596,7 @@ TclObject::getSafeArray (const Type &elementType, Tcl_Interp *interp) const
 
             case VT_I2:
             case VT_UI2:
-                static_cast<short *>(pData)[i] = value.getLong();
+                static_cast<short *>(pData)[i] = (short) value.getLong();
                 break;
 
             case VT_R4:
@@ -673,7 +722,7 @@ TclObject::toVariant (VARIANT *pDest,
         // Convert Tcl byte array to SAFEARRAY of bytes.
 
         V_VT(pDest) = VT_ARRAY | VT_UI1;
-        V_ARRAY(pDest) = newByteSafeArray(m_pObj);
+        V_ARRAY(pDest) = newSafeArray(m_pObj, VT_UI1);
 #endif
 
     } else if (m_pObj->typePtr == &Extension::naType) {

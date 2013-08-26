@@ -198,7 +198,7 @@ invoke (Tcl_Interp *interp,
 
     // Convert return value.
     if (pReturnValue != 0) {
-        TclObject value(pReturnValue, pMethod->type(), interp);
+        TclObject value(pReturnValue, pMethod->type(), interp, NULL);
         Tcl_SetObjResult(interp, value);
     }
     return TCL_OK;
@@ -245,7 +245,7 @@ invokeProperty (
     WORD dispatchFlags;
     const Property::Parameters &parameters = pProperty->parameters();
 
-    if (objc > parameters.size() + 2) {
+    if ( (unsigned int) objc > parameters.size() + 2) {
 	wrongNumArgs(interp, objv, parameters);
         return TCL_ERROR;
 
@@ -353,7 +353,7 @@ invokeWithoutInterfaceDesc (
     }
 
     if (pReturnValue != 0) {
-        TclObject returnValue(pReturnValue, Type::variant(), interp);
+        TclObject returnValue(pReturnValue, Type::variant(), interp, NULL);
         Tcl_SetObjResult(interp, returnValue);
     }
     return TCL_OK;
@@ -445,7 +445,7 @@ referenceObjCmd (
             } else {
                 // Return an error if too many arguments were given.
                 const Method::Parameters &parameters = pMethod->parameters();
-                if (!pMethod->vararg() && objc - i > parameters.size()) {
+                if (!pMethod->vararg() && (unsigned int) (objc - i) > parameters.size()) {
                     wrongNumArgs(interp, objv + i - 1, parameters);
                     return TCL_ERROR;
                 }

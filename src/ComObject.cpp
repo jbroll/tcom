@@ -283,13 +283,13 @@ ComObject::getArgument (VARIANT *pArg, const Parameter &param)
 
         if (param.flags() & PARAMFLAG_FIN) {
             // For in/out parameters, set the Tcl variable to the input value.
-            TclObject value(pArg, param.type(), m_interp);
+            TclObject value(pArg, param.type(), m_interp, NULL);
             setVariable(varName, value);
         }
         return varName;
 
     } else {
-        return TclObject(pArg, param.type(), m_interp);
+        return TclObject(pArg, param.type(), m_interp, NULL);
     }
 }
 
@@ -451,7 +451,7 @@ ComObject::invoke (const Method &method,
         if (wFlags & (DISPATCH_PROPERTYPUT | DISPATCH_PROPERTYPUTREF)) {
             VARIANT *pArg = &(pDispParams->rgvarg[argIndex]);
             try {
-                TclObject value(pArg, method.type(), m_interp);
+                TclObject value(pArg, method.type(), m_interp, NULL);
                 script.lappend(value);
             }
             catch (_com_error &) {
@@ -591,14 +591,14 @@ convertNativeToTclObject (va_list pArg,
         tclObject = TclObject(
             byRef ? va_arg(pArg, VARIANT *) : &va_arg(pArg, VARIANT),
             type,
-            interp);
+            interp, NULL);
         break;
 
     case VT_SAFEARRAY:
         tclObject = TclObject(
             byRef ? *va_arg(pArg, SAFEARRAY **) : va_arg(pArg, SAFEARRAY *),
             type,
-            interp);
+            interp, NULL);
         break;
 
     default:
