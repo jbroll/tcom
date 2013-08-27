@@ -198,7 +198,7 @@ invoke (Tcl_Interp *interp,
 
     // Convert return value.
     if (pReturnValue != 0) {
-        TclObject value(pReturnValue, pMethod->type(), interp, NULL);
+        TclObject value(pReturnValue, pMethod->type(), interp, 0);
         Tcl_SetObjResult(interp, value);
     }
     return TCL_OK;
@@ -353,7 +353,7 @@ invokeWithoutInterfaceDesc (
     }
 
     if (pReturnValue != 0) {
-        TclObject returnValue(pReturnValue, Type::variant(), interp, NULL);
+        TclObject returnValue(pReturnValue, Type::variant(), interp, 0);
         Tcl_SetObjResult(interp, returnValue);
     }
     return TCL_OK;

@@ -163,26 +163,14 @@ convertFromSafeArray (
     long *pIndices,
     const Type &type,
     Tcl_Interp *interp,
-    Tcl_Obj CONST *obj)
+    int bytes)
 {
     HRESULT hr;
     Tcl_Obj *pResult;
 
-    if ( obj != NULL && obj->typePtr == TclTypes::byteArrayType() ) {
-	int size;
-
-	switch ( elementType ) {
-	    case VT_I1  : size = 1;	break;
-	    case VT_I2  : size = 2;	break;
-	    case VT_I4  : size = 4;	break;
-
-	    case VT_UI1 : size = 1;	break;
-	    case VT_UI2 : size = 2;	break;
-	    case VT_UI4 : size = 4;	break;
-	}
-
+    if ( bytes ) {
 	int dimsize ; 
-        int length = 0 ; 
+        int length = 1 ; 
         for(int i = 0 ; i < psa->cDims ; ++i) { 
             dimsize = psa->cbElements * (psa->rgsabound[i].cElements);
             length *= dimsize; 
@@ -194,7 +182,7 @@ convertFromSafeArray (
             _com_issue_error(hr);
         }
 
-        pResult = Tcl_NewByteArrayObj((unsigned char *)psa->pvData, length*size);
+        pResult = Tcl_NewByteArrayObj((unsigned char *)psa->pvData, length);
 
         hr = SafeArrayUnaccessData(psa);
         if (FAILED(hr)) {
@@ -224,7 +212,7 @@ convertFromSafeArray (
         for (long i = lowerBound; i <= upperBound; ++i) {
             pIndices[dim - 1] = i;
             Tcl_Obj *pElement = convertFromSafeArray(
-                psa, elementType, dim + 1, pIndices, type, interp, obj);
+                psa, elementType, dim + 1, pIndices, type, interp, 0);
             Tcl_ListObjAppendElement(interp, pResult, pElement);
         }
         return pResult;
@@ -270,7 +258,7 @@ convertFromSafeArray (
                 _com_issue_error(hr);
             }
 
-            TclObject element(&elementVar, type, interp, NULL);
+            TclObject element(&elementVar, type, interp, 0);
             Tcl_ListObjAppendElement(interp, pResult, element);
         }
     }
@@ -347,7 +335,7 @@ convertFromUnknown (IUnknown *pUnknown, REFIID iid, Tcl_Interp *interp)
         Reference::newReference(pUnknown, pInterface));
 }
 
-TclObject::TclObject (VARIANT *pSrc, const Type &type, Tcl_Interp *interp, Tcl_Obj CONST *obj)
+TclObject::TclObject (VARIANT *pSrc, const Type &type, Tcl_Interp *interp, int bytes)
 {
     if (V_ISARRAY(pSrc)) {
         SAFEARRAY *psa = V_ISBYREF(pSrc) ? *V_ARRAYREF(pSrc) : V_ARRAY(pSrc);
@@ -355,7 +343,7 @@ TclObject::TclObject (VARIANT *pSrc, const Type &type, Tcl_Interp *interp, Tcl_O
         unsigned numDimensions = SafeArrayGetDim(psa);
         std::vector<long> indices(numDimensions);
 
-        m_pObj = convertFromSafeArray( psa, elementType, 1, &indices[0], type, interp, obj);
+        m_pObj = convertFromSafeArray( psa, elementType, 1, &indices[0], type, interp, bytes);
 
     } else if (vtMissing == pSrc) {
         m_pObj = Extension::newNaObj();
@@ -490,12 +478,12 @@ TclObject::TclObject (const _bstr_t &src)
     Tcl_IncrRefCount(m_pObj);
 }
 
-TclObject::TclObject (SAFEARRAY *psa, const Type &type, Tcl_Interp *interp, Tcl_Obj const *obj)
+TclObject::TclObject (SAFEARRAY *psa, const Type &type, Tcl_Interp *interp, int bytes)
 {
     unsigned numDimensions = SafeArrayGetDim(psa);
     std::vector<long> indices(numDimensions);
     m_pObj = convertFromSafeArray(
-        psa, type.elementType().vartype(), 1, &indices[0], type, interp, obj);
+        psa, type.elementType().vartype(), 1, &indices[0], type, interp, bytes);
 
     Tcl_IncrRefCount(m_pObj);
 }

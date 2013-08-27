@@ -107,7 +107,7 @@ public:
         VARIANT *pSrc,          // value to convert from
         const Type &type,       // expected type for interface pointers
         Tcl_Interp *interp,
-	Tcl_Obj const *obj);
+	int bytes);
 
     // Construct Tcl object from _bstr_t.
     TclObject(const _bstr_t &src);
@@ -117,7 +117,7 @@ public:
         SAFEARRAY *psa,         // value to convert from
         const Type &type,       // array type
         Tcl_Interp *interp,
-	Tcl_Obj const *obj);
+	int bytes);
 
     // Convert Tcl object to VARIANT value.
     void toVariant(

@@ -12,10 +12,12 @@ protected:
 
     // argument values
     NativeValue *m_args;
-
     Arguments();
 
+    int		*flags;
+
 public:
+
     virtual ~Arguments();
 
     // Get arguments in the format required by the Invoke function.

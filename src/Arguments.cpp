@@ -4,7 +4,8 @@
 #include "TclObject.h"
 
 Arguments::Arguments ():
-    m_args(0)
+    m_args(0),
+    flags(0)
 {
     m_dispParams.rgvarg = NULL;
     m_dispParams.rgdispidNamedArgs = NULL;
@@ -15,6 +16,7 @@ Arguments::Arguments ():
 Arguments::~Arguments ()
 {
     delete[] m_args;
+    delete[] flags;
 }
 
 
@@ -36,6 +38,9 @@ TypedArguments::initArgument (
 {
     TclObject argument(pObj);
     VARTYPE vt = parameter.type().vartype();
+
+    flags[argIndex] = 0;
+
 
     if (pObj->typePtr == &Extension::naType) {
         // This variant indicates a missing optional argument.
@@ -86,6 +91,10 @@ TypedArguments::initArgument (
                 if (pValue == 0) {
                     return TCL_ERROR;
                 }
+
+		// The named output arg is a byte array - flag to pass bytes back later
+		//
+		flags[argIndex] = pValue->typePtr == TclTypes::byteArrayType();
 
                 TclObject value(pValue);
 
@@ -140,7 +149,7 @@ TypedArguments::storeOutValues (
         Method::Parameters::const_iterator p = parameters.begin();
         for (int i = 0; i < objc && p != parameters.end(); ++i, --j, ++p) {
             if (p->flags() & PARAMFLAG_FOUT) {
-                TclObject value(&m_outValues[j], p->type(), interp, objv[i]);
+                TclObject value(&m_outValues[j], p->type(), interp, flags[j]);
                 Tcl_ObjSetVar2(
                     interp, objv[i], NULL, value, TCL_LEAVE_ERR_MSG);
             }
@@ -170,6 +179,7 @@ PositionalArguments::initialize (
     if (method.vararg() && inputCount > 0) {
         m_args = new NativeValue[inputCount];
 
+
         // Convert the arguments actually provided.
         int inputIndex = 0;
         int argIndex = inputCount - 1;
@@ -184,6 +194,7 @@ PositionalArguments::initialize (
     } else if (paramCount > 0) {
         m_args = new NativeValue[paramCount];
         m_outValues = new NativeValue[paramCount];
+	flags = new int[paramCount];
 
         int j = paramCount - 1;
         Method::Parameters::const_iterator p = parameters.begin();
@@ -268,6 +279,8 @@ NamedArguments::initialize (
         m_outValues = new NativeValue[cArgs];
         m_namedDispids = new DISPID[cArgs];
 
+	flags = new int[cArgs];
+
         int j = cArgs - 1;
         for (int i = 0; i < objc; i += 2, --j) {
             char *name = Tcl_GetStringFromObj(objv[i], 0);
@@ -305,6 +318,7 @@ UntypedArguments::initialize (
 {
     if (objc > 0) {
         m_args = new NativeValue[objc];
+	flags = new int[objc];
 
         int j = objc - 1;
         for (int i = 0; i < objc; ++i, --j) {
@@ -318,6 +332,8 @@ UntypedArguments::initialize (
 
     m_dispParams.rgvarg = m_args;
     m_dispParams.cArgs = objc;
+
+
 
     if (dispatchFlags == DISPATCH_PROPERTYPUT
      || dispatchFlags == DISPATCH_PROPERTYPUTREF) {

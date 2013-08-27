@@ -6,9 +6,7 @@ tcl procedure is called with a byte array object a buffer of the corrosponding
 size is passed to the COM routine.  On return the data from the buffer is 
 copied back to the byte array.  There are a few too many byte array objects 
 created and the data is copied too many times, but it works and isn't grossly 
-inefficient.
-
-Changes should appear in this repository in the next few days.
+inefficient and works for me.
 
 
 ---------------------------------------------------------------------------------

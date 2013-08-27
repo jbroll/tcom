@@ -26,7 +26,7 @@ Extension::foreachCmd (
     if (pCollection == 0) {
         const char *arg = Tcl_GetStringFromObj(objv[2], 0);
         Tcl_AppendResult(
-            interp, "invalid interface pointer handle ", arg, NULL);
+            interp, "invalid interface pointer handle ", arg, 0);
         return TCL_ERROR;
     }
 
@@ -106,7 +106,7 @@ Extension::foreachCmd (
 		    _variant_t elementVar;
 		    hr = pEnumVARIANT->Next(1, &elementVar, &count);
 		    if (hr == S_OK && count > 0) {
-			value = TclObject(&elementVar, Type::variant(), interp, NULL);
+			value = TclObject(&elementVar, Type::variant(), interp, 0);
 		    }
 		}
 		break;
