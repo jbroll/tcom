@@ -1,12 +1,12 @@
 
-This is a fork of https://github.com/pukkaone/tcom.gito
+This is a fork of https://github.com/pukkaone/tcom.git
 
 I needed to be able to exchange data buffers with a COM interface.  If the 
 tcl procedure is called with a byte array object a buffer of the corrosponding
 size is passed to the COM routine.  On return the data from the buffer is 
 copied back to the byte array.  There are a few too many byte array objects 
-created and the data is copied too many times, but it works and isn't grossly 
-inefficient and works for me.
+created and the data is copied too many times, but it isn't grossly 
+inefficient doesn't appear to leak memory and works for me.
 
 
 ---------------------------------------------------------------------------------
